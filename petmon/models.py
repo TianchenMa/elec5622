@@ -26,7 +26,7 @@ ATTRIBUTE = {
         'defence': 25,
         'speed': 10,
     },
-    3: {
+    2: {
         'hp': 100,
         'attack': 25,
         'defence': 15,
@@ -50,12 +50,8 @@ class Pet(models.Model):
     defence = models.IntegerField(null=False)
     speed = models.IntegerField(null=False)
 
-    def __init__(self, name, kind, owner):
-        super().__init__()
-        self.name = name
-        self.kind = kind
-        self.owner = owner
-        self.hp = ATTRIBUTE[kind]['hp']
-        self.attack = ATTRIBUTE[kind]['attack']
-        self.defence = ATTRIBUTE[kind]['defence']
-        self.speed = ATTRIBUTE[kind]['speed']
+    def assign_attribute(self):
+        self.hp = ATTRIBUTE[self.kind]['hp']
+        self.attack = ATTRIBUTE[self.kind]['attack']
+        self.defence = ATTRIBUTE[self.kind]['defence']
+        self.speed = ATTRIBUTE[self.kind]['speed']
