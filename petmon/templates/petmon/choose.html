@@ -1,0 +1,15 @@
+{% extends 'petmon/Base.html' %}
+
+
+{% block content %}
+
+    <form action="{% url 'petmon:pet' 'choose' %}" method="post">
+        {% csrf_token %}
+        Pet kind: <input type="radio" name="pet_kind" value="0" />Fire<br>
+        <input type="radio" name="pet_kind" value="1" />Water<br>
+        <input type="radio" name="pet_kind" value="2" />Plant<br>
+        Pet name: <input type="text" name="pet_name"/><br>
+        <input type="submit" name="Submit"/>
+    </form>
+
+{% endblock %}
