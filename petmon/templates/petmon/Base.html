@@ -16,6 +16,9 @@
     <a href="{% url 'petmon:user_control' 'signup' %}">Sign up</a>
 {% else %}
     <p>{{ log_user.username }}</p>
+    <a href="{% url 'petmon:pet' 'info' %}">My Pet</a>
+    <p>Step count: {{ log_user.step }}</p>
+    <a href="{% url 'petmon:pet' 'choose' %}">Add Pet</a>
     <form action="{% url 'petmon:user_control' 'logout' %}" method="post">
         {% csrf_token %}
         <button type="submit">Logout</button>
