@@ -6,10 +6,24 @@ from django.views import View
 from django.views.generic import TemplateView
 from django.views.generic.base import ContextMixin
 
-from petmon.models import User
+from petmon.forms import LoginForm, PetChooseForm
+from petmon.models import User, Pet
 
 
 # Create your views here.
+ITEM_KIND = {
+    '0': {
+
+    },
+    '1': {
+
+    },
+    '2': {
+
+    }
+}
+
+
 class BaseMixin(ContextMixin):
     def get_context_data(self, **kwargs):
         context = super(BaseMixin, self).get_context_data(**kwargs)
@@ -54,13 +68,15 @@ class UserControlView(BaseMixin, View):
             return HttpResponseRedirect(reverse('petmon:index'))
 
     def login(self):
-        username = self.request.POST['username']
-        password = self.request.POST['password']
-        user = authenticate(username=username, password=password)
+        form = LoginForm(self.request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            user = authenticate(username=username, password=password)
 
-        if user is not None:
-            self.request.session.set_expiry(0)
-            login(self.request, user)
+            if user is not None:
+                self.request.session.set_expiry(0)
+                login(self.request, user)
 
         return HttpResponseRedirect(reverse('petmon:index'))
 
@@ -84,4 +100,69 @@ class UserControlView(BaseMixin, View):
         except Exception:
             pass
 
-        return HttpResponseRedirect(reverse('petmon:index'))
+        return render(self.request, 'petmon/choose.html')
+
+
+class PetView(BaseMixin, View):
+    def get(self, *args, **kwargs):
+        slug = self.kwargs.get('slug')
+
+        if slug == 'info':
+            context = super(PetView, self).get_context_data()
+            user = context['log_user']
+            pet = user.pet_set.all()
+            context['petlist'] = pet
+
+            return render(self.request, 'petmon/pet_info.html', context)
+
+        elif slug == 'choose':
+            context = super(PetView, self).get_context_data()
+            return render(self.request, 'petmon/choose.html', context)
+        else:
+            return
+
+    def post(self, *args, **kwargs):
+        slug = self.kwargs.get('slug')
+
+        if slug == 'choose':
+            return self.choose()
+
+        else:
+            return
+
+    def choose(self):
+        form = PetChooseForm(self.request.POST)
+        if form.is_valid():
+            context = super(PetView, self).get_context_data()
+            log_user = context['log_user']
+            pet_name = form.cleaned_data['pet_name']
+            pet_kind = form.cleaned_data['pet_kind']
+            pet = Pet(name=pet_name, kind=pet_kind, owner=log_user)
+            pet.assign_attribute()
+            pet.save()
+        else:
+            return render(self.request, 'petmon/choose.html')
+
+        context = super(PetView, self).get_context_data()
+        user = context['log_user']
+        context['petlist'] = user.pet_set.all()
+
+        return render(self.request, 'petmon/pet_info.html', context)
+
+    def feed(self):
+        return
+
+
+class StoreView(BaseMixin, View):
+    def get(self):
+        return render(self.request, 'petmon/store.html')
+
+    def post(self):
+        return
+
+    def get_context_data(self, **kwargs):
+        context = super(StoreView, self).get_context_data()
+
+
+    def buy(self):
+        return

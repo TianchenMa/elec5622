@@ -1,0 +1,16 @@
+{% extends 'petmon/Base.html' %}
+
+{% block content %}
+    {% if petlist %}
+        <ul>
+            {% for pet in petlist %}
+                <li>Name: {{ pet.name }}</li>
+                <p>Kind: {{ pet.kind }}</p>
+                <p>HP: {{ pet.hp }}</p>
+                <p>Attack: {{ pet.attack }}</p>
+                <p>Defence: {{ pet.defence }}</p>
+                <p>Speed: {{ pet.speed }}</p>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}
