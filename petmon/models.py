@@ -13,6 +13,11 @@ KIND = {
     '2': u'Plant',
 }
 
+FOOD_KIND = (
+    ('0', 'food'),
+    ('1', 'drink')
+)
+
 ATTRIBUTE = {
     '0': {
         'hp': 100,
@@ -55,3 +60,9 @@ class Pet(models.Model):
         self.attack = ATTRIBUTE[self.kind]['attack']
         self.defence = ATTRIBUTE[self.kind]['defence']
         self.speed = ATTRIBUTE[self.kind]['speed']
+
+
+class Item(models.Model):
+    name = models.CharField(max_length=50, null=False)
+    kind = models.CharField(max_length=1, choices=FOOD_KIND, default='0')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)

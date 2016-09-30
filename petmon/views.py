@@ -11,6 +11,19 @@ from petmon.models import User, Pet
 
 
 # Create your views here.
+ITEM_KIND = {
+    '0': {
+
+    },
+    '1': {
+
+    },
+    '2': {
+
+    }
+}
+
+
 class BaseMixin(ContextMixin):
     def get_context_data(self, **kwargs):
         context = super(BaseMixin, self).get_context_data(**kwargs)
@@ -142,10 +155,14 @@ class PetView(BaseMixin, View):
 
 class StoreView(BaseMixin, View):
     def get(self):
-        return
+        return render(self.request, 'petmon/store.html')
 
     def post(self):
         return
+
+    def get_context_data(self, **kwargs):
+        context = super(StoreView, self).get_context_data()
+
 
     def buy(self):
         return
