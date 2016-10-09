@@ -13,7 +13,7 @@ KIND = {
     '2': u'Plant',
 }
 
-FOOD_KIND = (
+ITEM_KIND = (
     ('0', 'food'),
     ('1', 'drink')
 )
@@ -54,6 +54,8 @@ class Pet(models.Model):
     attack = models.IntegerField(null=False)
     defence = models.IntegerField(null=False)
     speed = models.IntegerField(null=False)
+    satiation = models.IntegerField(null=False, default=100)
+    lush = models.IntegerField(null=False, default=100)
 
     def assign_attribute(self):
         self.hp = ATTRIBUTE[self.kind]['hp']
@@ -62,7 +64,19 @@ class Pet(models.Model):
         self.speed = ATTRIBUTE[self.kind]['speed']
 
 
-class Item(models.Model):
+class Commodity(models.Model):
     name = models.CharField(max_length=50, null=False)
-    kind = models.CharField(max_length=1, choices=FOOD_KIND, default='0')
+    kind = models.CharField(max_length=1, choices=ITEM_KIND, default='0')
+    price = models.IntegerField(null=False)
+    satiation = models.IntegerField(null=False)
+    lush = models.IntegerField(null=False)
+    hp = models.IntegerField(null=False)
+    attack = models.IntegerField(null=False)
+    defence = models.IntegerField(null=False)
+    speed = models.IntegerField(null=False)
+
+
+class Item(models.Model):
+    item = models.ForeignKey(Commodity, on_delete=models.CASCADE)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    purchase_date = models.DateTimeField("Date purchased.")
