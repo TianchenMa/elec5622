@@ -76,7 +76,10 @@ class Commodity(models.Model):
     speed = models.IntegerField(null=False)
 
 
-class Item(models.Model):
-    item = models.ForeignKey(Commodity, on_delete=models.CASCADE)
+class BoughtItem(models.Model):
+    commodity = models.ForeignKey(Commodity, on_delete=models.CASCADE)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     purchase_date = models.DateTimeField("Date purchased.")
+
+    class Meta:
+        ordering = ['-purchase_date']
