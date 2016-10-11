@@ -1,29 +1,20 @@
 from django.contrib.auth import authenticate, login, logout
+from django.db.models import F
+from django.db.models import Q
+from django.http import Http404
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
+from django.views.generic import ListView
 from django.views.generic import TemplateView
 from django.views.generic.base import ContextMixin
 
 from petmon.forms import LoginForm, PetChooseForm
-from petmon.models import User, Pet
+from petmon.models import User, Pet, Commodity, Repo
 
 
 # Create your views here.
-ITEM_KIND = {
-    '0': {
-
-    },
-    '1': {
-
-    },
-    '2': {
-
-    }
-}
-
-
 class BaseMixin(ContextMixin):
     def get_context_data(self, **kwargs):
         context = super(BaseMixin, self).get_context_data(**kwargs)
@@ -153,16 +144,76 @@ class PetView(BaseMixin, View):
         return
 
 
-class StoreView(BaseMixin, View):
-    def get(self):
-        return render(self.request, 'petmon/store.html')
-
-    def post(self):
-        return
+class StoreView(BaseMixin, ListView):
+    model = Commodity
+    template_name = 'petmon/store.html'
 
     def get_context_data(self, **kwargs):
-        context = super(StoreView, self).get_context_data()
+        context = super(StoreView, self).get_context_data(**kwargs)
 
+        return context
+
+
+class BuyView(BaseMixin, View):
+    def get(self, *args, **kwargs):
+        slug = self.kwargs.get('slug')
+
+        if slug == '':
+            return
+        else:
+            raise Http404
+
+    def post(self, *args, **kwargs):
+        slug = self.kwargs.get('slug')
+
+        if slug == 'buy':
+            return self.buy()
+        else:
+            raise Http404
 
     def buy(self):
-        return
+        cart = {}
+        context = super(BuyView, self).get_context_data()
+        for i in range(1, Commodity.objects.count() + 1):
+            try:
+                count = int(self.request.POST[str(i)])
+            except ValueError:
+                pass
+            else:
+                if count > 0:
+                    cart[str(i)] = count
+
+        for key in cart.keys():
+            comm = Commodity.objects.get(id=int(key))
+            owner = context['log_user']
+            count = int(cart[key])
+            if Repo.objects.filter(Q(owner=owner) & Q(commodity=comm)).exists():
+                boughtitem = Repo.objects.get(Q(owner=owner) & Q(commodity=comm))
+                boughtitem.count = F('count') + count
+            else:
+                boughtitem = Repo.objects.create(commodity=comm,
+                                                 count=count,
+                                                 owner=owner)
+
+            try:
+                boughtitem.save()
+            except Exception:
+                return render(reverse('petmon:store'))
+
+        context['object_list'] = Repo.objects.filter(owner=context['log_user'])
+
+        return render(self.request, 'petmon/my_repo.html', context)
+
+
+class RepoView(BaseMixin, ListView):
+    model = Repo
+    template_name = 'petmon/my_repo.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(RepoView, self).get_context_data(**kwargs)
+        context['object_list'] = Repo.objects.filter(owner=context['log_user'])
+
+        return context
+
+
+

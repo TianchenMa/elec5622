@@ -19,11 +19,14 @@
     <a href="{% url 'petmon:pet' 'info' %}">My Pet</a>
     <p>Step count: {{ log_user.step }}</p>
     <a href="{% url 'petmon:pet' 'choose' %}">Add Pet</a>
+    <a href="{% url 'petmon:repo' %}">My Repo</a>
     <form action="{% url 'petmon:user_control' 'logout' %}" method="post">
         {% csrf_token %}
         <button type="submit">Logout</button>
     </form>
 {% endif %}
+
+<a href="{% url 'petmon:store' %}">Store</a>
 </div>
 
 <div id="main">

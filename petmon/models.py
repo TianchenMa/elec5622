@@ -76,10 +76,7 @@ class Commodity(models.Model):
     speed = models.IntegerField(null=False)
 
 
-class BoughtItem(models.Model):
+class Repo(models.Model):
     commodity = models.ForeignKey(Commodity, on_delete=models.CASCADE)
+    count = models.IntegerField(null=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    purchase_date = models.DateTimeField("Date purchased.")
-
-    class Meta:
-        ordering = ['-purchase_date']
