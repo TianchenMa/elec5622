@@ -6,6 +6,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
+from django.views.generic import DetailView
 from django.views.generic import ListView
 from django.views.generic import TemplateView
 from django.views.generic.base import ContextMixin
@@ -98,17 +99,18 @@ class PetView(BaseMixin, View):
     def get(self, *args, **kwargs):
         slug = self.kwargs.get('slug')
 
-        if slug == 'info':
+        if slug == 'choose':
             context = super(PetView, self).get_context_data()
-            user = context['log_user']
-            pet = user.pet_set.all()
-            context['petlist'] = pet
+            return render(self.request, 'petmon/choose.html', context)
+
+        elif slug.isdecimal():
+            context = super(PetView, self).get_context_data()
+            user = User.objects.get(id=slug)
+            context['petlist'] = user.pet_set.all()
+            context['owner'] = user
 
             return render(self.request, 'petmon/pet_info.html', context)
 
-        elif slug == 'choose':
-            context = super(PetView, self).get_context_data()
-            return render(self.request, 'petmon/choose.html', context)
         else:
             return
 
@@ -214,6 +216,3 @@ class RepoView(BaseMixin, ListView):
         context['object_list'] = Repo.objects.filter(owner=context['log_user'])
 
         return context
-
-
-

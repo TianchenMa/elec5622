@@ -1,6 +1,7 @@
 {% extends 'petmon/Base.html' %}
 
 {% block content %}
+    <a href="{% url 'petmon:pet' 'info' %}">Feed my pet</a>
     {% if object_list %}
         <ul>
             {% for item in object_list %}

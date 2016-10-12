@@ -1,6 +1,8 @@
 {% extends 'petmon/Base.html' %}
 
 {% block content %}
+    <h3>{{ owner.username }}' Pets</h3>
+
     {% if petlist %}
         <ul>
             {% for pet in petlist %}

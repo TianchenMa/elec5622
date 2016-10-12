@@ -11,6 +11,8 @@ urlpatterns = [
 
     url(r'^(?P<slug>\w+)$', UserControlView.as_view(), name='user_control'),
 
+    # url(r'^pet/(?P<slug>[-\w]+)/$', PetDetailView.as_view(), name='my_pet'),
+
     url(r'^pet/(?P<slug>\w+)$', PetView.as_view(), name='pet'),
 
     url(r'^store/$', StoreView.as_view(), name='store'),

@@ -16,7 +16,7 @@
     <a href="{% url 'petmon:user_control' 'signup' %}">Sign up</a>
 {% else %}
     <p>{{ log_user.username }}</p>
-    <a href="{% url 'petmon:pet' 'info' %}">My Pet</a>
+    <a href="{% url 'petmon:pet' log_user.id %}">My Pet</a>
     <p>Step count: {{ log_user.step }}</p>
     <a href="{% url 'petmon:pet' 'choose' %}">Add Pet</a>
     <a href="{% url 'petmon:repo' %}">My Repo</a>
