@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from petmon.models import User, Pet
+from petmon.models import User, Pet, Commodity
 
 
 # Register your models here.
@@ -20,6 +20,8 @@ class PetAdmin(admin.ModelAdmin):
         'name',
         'owner',
         'kind',
+        'satiation',
+        'lush',
         'hp',
         'attack',
         'defence',
@@ -28,5 +30,23 @@ class PetAdmin(admin.ModelAdmin):
 
     list_display = ('name', 'owner', 'kind')
 
+
+class CommodityAdmin(admin.ModelAdmin):
+    fields = [
+        'name',
+        'kind',
+        'price',
+        'satiation',
+        'lush',
+        'hp',
+        'attack',
+        'defence',
+        'speed',
+    ]
+
+    list_display = ('name', 'kind', 'price')
+
+
 admin.site.register(User, UserAdmin)
 admin.site.register(Pet, PetAdmin)
+admin.site.register(Commodity, CommodityAdmin)

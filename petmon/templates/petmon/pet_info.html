@@ -1,16 +1,43 @@
 {% extends 'petmon/Base.html' %}
 
 {% block content %}
-    {% if petlist %}
+    {% if not owner.id == log_user.id %}
+        <h3>{{ owner.username }}' Pets</h3>
+    {% else %}
+        <h3>My Pets</h3>
+        <a href="{% url 'petmon:pet' 'choose' %}">Add Pet</a>
+    {% endif %}
+
+    <div id="added-stuff">
+        {% for item, count in feed.items %}
+            Item: {{ item }}
+            Count: {{ count }}
+        {% endfor %}
+    </div>
+
+    {% if pet %}
+        <p>Name: {{ pet.name }}</p>
+        <p>Kind: {{ pet.kind }}</p>
+        <p>HP: {{ pet.hp }}</p>
+        <p>Attack: {{ pet.attack }}</p>
+        <p>Defence: {{ pet.defence }}</p>
+        <p>Speed: {{ pet.speed }}</p>
+        <p>Satiation: {{ pet.satiation }}</p>
+        <p>Lush: {{ pet.lush }}</p>
+    {% endif %}
+
+    <br>
+    <h3>My items</h3>
+
+    {% if object_list %}
         <ul>
-            {% for pet in petlist %}
-                <li>Name: {{ pet.name }}</li>
-                <p>Kind: {{ pet.kind }}</p>
-                <p>HP: {{ pet.hp }}</p>
-                <p>Attack: {{ pet.attack }}</p>
-                <p>Defence: {{ pet.defence }}</p>
-                <p>Speed: {{ pet.speed }}</p>
+            {% for item in object_list %}
+                <li>Name: {{ item.commodity.name }}</li>
+                <p>Count: {{ item.count }}</p>
+                <a href="{% url 'petmon:pet' item.id %}">Add to feed</a>
             {% endfor %}
         </ul>
+    {% else %}
+        Empty repo.
     {% endif %}
 {% endblock %}
