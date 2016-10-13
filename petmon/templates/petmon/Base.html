@@ -6,32 +6,31 @@
 </head>
 <body>
 <div id="login-form">
-{% if not request.user.id %}
-    <form action="{% url 'petmon:user_control' 'login' %}" method="post">
-        {% csrf_token %}
-        User name: <input type="text" name="username">
-        Password: <input type="password" name="password">
-        <input type="submit" value="Login" />
-    </form>
-    <a href="{% url 'petmon:user_control' 'signup' %}">Sign up</a>
-{% else %}
-    <p>{{ log_user.username }}</p>
-    <a href="{% url 'petmon:pet' log_user.id %}">My Pet</a>
-    <p>Step count: {{ log_user.step }}</p>
-    <a href="{% url 'petmon:pet' 'choose' %}">Add Pet</a>
-    <a href="{% url 'petmon:repo' %}">My Repo</a>
-    <form action="{% url 'petmon:user_control' 'logout' %}" method="post">
-        {% csrf_token %}
-        <button type="submit">Logout</button>
-    </form>
-{% endif %}
+    {% if not log_user %}
+        <form action="{% url 'petmon:user_control' 'login' %}" method="post">
+            {% csrf_token %}
+            User name: <input type="text" name="username">
+            Password: <input type="password" name="password">
+            <input type="submit" value="Login"/>
+        </form>
+        <a href="{% url 'petmon:user_control' 'signup' %}">Sign up</a>
+    {% else %}
+        <p>{{ log_user.username }}</p>
+        <a href="{% url 'petmon:my_pet' %}">My Pet</a>
+        <p>Step count: {{ log_user.step }}</p>
+        <a href="{% url 'petmon:repo' %}">My Repo</a>
+        <form action="{% url 'petmon:user_control' 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit">Logout</button>
+        </form>
+    {% endif %}
 
-<a href="{% url 'petmon:store' %}">Store</a>
+    <a href="{% url 'petmon:store' %}">Store</a>
 </div>
-
+<br>
 <div id="main">
-{% block content %}
-{% endblock %}
+    {% block content %}
+    {% endblock %}
 </div>
 
 <a href="{% url 'petmon:index' %}">Index</a>

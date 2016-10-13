@@ -49,7 +49,7 @@ class User(AbstractUser):
 class Pet(models.Model):
     name = models.CharField(max_length=50, null=False)
     kind = models.CharField(max_length=1)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    owner = models.OneToOneField(User, on_delete=models.CASCADE)
     hp = models.IntegerField(null=False)
     attack = models.IntegerField(null=False)
     defence = models.IntegerField(null=False)

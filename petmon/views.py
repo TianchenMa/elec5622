@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, login, logout
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
 from django.db.models import Q
 from django.http import Http404
@@ -34,6 +35,7 @@ class IndexView(BaseMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
+        context['users'] = User.objects.all()
 
         return context
 
@@ -44,6 +46,16 @@ class UserControlView(BaseMixin, View):
 
         if slug == 'signup':
             return render(self.request, 'petmon/signup.html')
+        elif slug.isdecimal():
+            context = super(UserControlView, self).get_context_data()
+            if User.objects.filter(pk=slug).exists():
+                user = User.objects.get(pk=slug)
+            else:
+                raise Http404
+            context['pet'] = user.pet
+            context['owner'] = user
+
+            return render(self.request, 'petmon/pet_info.html', context)
         else:
             return HttpResponseRedirect(reverse('petmon:index'))
 
@@ -69,6 +81,8 @@ class UserControlView(BaseMixin, View):
             if user is not None:
                 self.request.session.set_expiry(0)
                 login(self.request, user)
+                context = dict()
+                context['log_user'] = user
 
         return HttpResponseRedirect(reverse('petmon:index'))
 
@@ -95,24 +109,38 @@ class UserControlView(BaseMixin, View):
         return render(self.request, 'petmon/choose.html')
 
 
+class MyPetView(BaseMixin, TemplateView):
+
+    template_name = 'petmon/pet_info.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(MyPetView, self).get_context_data()
+        user = context['log_user']
+        context['owner'] = user
+        context['pet'] = user.pet
+        context['object_list'] = Repo.objects.filter(owner=context['log_user'])
+        try:
+            context['feed'] = self.request.session['feed']
+        except KeyError:
+            pass
+
+        return context
+
+
 class PetView(BaseMixin, View):
     def get(self, *args, **kwargs):
         slug = self.kwargs.get('slug')
 
         if slug == 'choose':
             context = super(PetView, self).get_context_data()
+
             return render(self.request, 'petmon/choose.html', context)
 
         elif slug.isdecimal():
-            context = super(PetView, self).get_context_data()
-            user = User.objects.get(id=slug)
-            context['petlist'] = user.pet_set.all()
-            context['owner'] = user
-
-            return render(self.request, 'petmon/pet_info.html', context)
+            return self.addfeed()
 
         else:
-            return
+            raise Http404
 
     def post(self, *args, **kwargs):
         slug = self.kwargs.get('slug')
@@ -120,8 +148,41 @@ class PetView(BaseMixin, View):
         if slug == 'choose':
             return self.choose()
 
-        else:
+        elif slug == 'feed':
             return
+
+        else:
+            raise Http404
+
+    def addfeed(self):
+        slug = self.kwargs.get('slug')
+        context = super(PetView, self).get_context_data()
+        user = context['log_user']
+        try:
+            item = Repo.objects.get(pk=int(slug), owner=user)
+        except ObjectDoesNotExist:
+            raise Http404
+        else:
+            pass
+
+        try:
+            self.request.session['feed'][slug] += 1
+        except KeyError as e:
+            if e.args[0] == 'feed':
+                self.request.session['feed'] = dict()
+                self.request.session['feed'][slug] = 1
+            else:
+                self.request.session['feed'][slug] = 1
+        else:
+            pass
+
+        self.request.session.modified = True
+        context['owner'] = user
+        context['pet'] = user.pet
+        context['object_list'] = Repo.objects.filter(owner=user)
+        context['feed'] = self.request.session['feed']
+
+        return render(self.request, 'petmon/pet_info.html', context)
 
     def choose(self):
         form = PetChooseForm(self.request.POST)
@@ -138,12 +199,16 @@ class PetView(BaseMixin, View):
 
         context = super(PetView, self).get_context_data()
         user = context['log_user']
-        context['petlist'] = user.pet_set.all()
+        context['pet'] = user.pet
 
         return render(self.request, 'petmon/pet_info.html', context)
 
-    def feed(self):
-        return
+    # def feed(self):
+    #     context = super(PetView, self).get_context_data()
+    #     for k, v in context['feed']:
+    #         item = Repo.objects.get(pk=k)
+    #
+    #     return
 
 
 class StoreView(BaseMixin, ListView):
@@ -157,14 +222,6 @@ class StoreView(BaseMixin, ListView):
 
 
 class BuyView(BaseMixin, View):
-    def get(self, *args, **kwargs):
-        slug = self.kwargs.get('slug')
-
-        if slug == '':
-            return
-        else:
-            raise Http404
-
     def post(self, *args, **kwargs):
         slug = self.kwargs.get('slug')
 
