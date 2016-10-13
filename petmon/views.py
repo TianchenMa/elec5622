@@ -149,14 +149,21 @@ class PetView(BaseMixin, View):
             return self.choose()
 
         elif slug == 'feed':
-            return
+            return self.feed()
 
         else:
             raise Http404
 
+    def get_context_data(self, **kwargs):
+        context = super(PetView, self).get_context_data()
+        context['object_list'] = Repo.objects.filter(owner=context['log_user'])
+        context['owner'] = context['log_user']
+
+        return context
+
     def addfeed(self):
         slug = self.kwargs.get('slug')
-        context = super(PetView, self).get_context_data()
+        context = self.get_context_data()
         user = context['log_user']
         try:
             item = Repo.objects.get(pk=int(slug), owner=user)
@@ -177,9 +184,7 @@ class PetView(BaseMixin, View):
             pass
 
         self.request.session.modified = True
-        context['owner'] = user
         context['pet'] = user.pet
-        context['object_list'] = Repo.objects.filter(owner=user)
         context['feed'] = self.request.session['feed']
 
         return render(self.request, 'petmon/pet_info.html', context)
@@ -197,18 +202,42 @@ class PetView(BaseMixin, View):
         else:
             return render(self.request, 'petmon/choose.html')
 
-        context = super(PetView, self).get_context_data()
+        context = self.get_context_data()
         user = context['log_user']
         context['pet'] = user.pet
 
         return render(self.request, 'petmon/pet_info.html', context)
 
-    # def feed(self):
-    #     context = super(PetView, self).get_context_data()
-    #     for k, v in context['feed']:
-    #         item = Repo.objects.get(pk=k)
-    #
-    #     return
+    def feed(self):
+        context = self.get_context_data()
+        feeds = self.request.session['feed']
+        fails = dict()
+        satiation, lush = 0, 0
+        user = context['log_user']
+        pet = Pet.objects.get(owner=user)
+
+        for k, v in feeds.items():
+            item = Repo.objects.get(pk=k)
+            if item.count >= v:
+                satiation += v * item.commodity.satiation
+                lush += v * item.commodity.lush
+                pet.satiation += satiation
+                pet.lush += lush
+                item.count = F('count') - v
+
+                if item.count == 0:
+                    item.delete()
+                else:
+                    item.save()
+            else:
+                fails[k] = v
+
+        pet.save()
+        context['pet'] = pet
+        del self.request.session['feed']
+        self.request.session.modified = True
+
+        return render(self.request, 'petmon/pet_info.html', context)
 
 
 class StoreView(BaseMixin, ListView):

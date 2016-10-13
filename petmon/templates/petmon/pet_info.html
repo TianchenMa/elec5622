@@ -9,10 +9,15 @@
     {% endif %}
 
     <div id="added-stuff">
-        {% for item, count in feed.items %}
-            Item: {{ item }}
-            Count: {{ count }}
-        {% endfor %}
+        {% if feed %}
+            {% for item, count in feed.items %}
+                <p>Item: {{ item }} - Count: {{ count }}</p>
+            {% endfor %}
+            <form action="{% url 'petmon:pet' 'feed' %}" method="post">
+                {% csrf_token %}
+                <button type="submit">Feed</button>
+            </form>
+        {% endif %}
     </div>
 
     {% if pet %}
