@@ -25,6 +25,8 @@
             {% endfor %}
         </ul>
 
+        <p>Total value: <strong>{{ amount }}</strong></p>
+
         <form action="{% url 'petmon:shop_control' 'clean_cart' %}" method="post">
             {% csrf_token %}
             <button type="submit">Clean Cart</button>
