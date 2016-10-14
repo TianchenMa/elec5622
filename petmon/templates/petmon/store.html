@@ -1,19 +1,72 @@
 {% extends 'petmon/Base.html' %}
 
 {% block content %}
-    <form id="shopForm" action="{% url 'petmon:shop_control' 'buy' %}" method="post">
-        {% csrf_token %}
+
+    {% if log_user %}
+        <h3>My Repo</h3>
+        {% if my_item %}
+            <ul>
+                {% for item in my_item %}
+                    <li>Name: {{ item.commodity.name }}</li>
+                    <p>Count: {{ item.count }}</p>
+                {% endfor %}
+            </ul>
+        {% else %}
+            Empty repo.
+        {% endif %}
+    {% endif %}
+
+    <h3>Shopping cart</h3>
+    {% if cart %}
         <ul>
-            {% if object_list %}
-                {% for item in object_list %}
+            {% for itemname, count in cart.items %}
+                <li>Name: {{ itemname }}</li>
+                <p>Count: {{ count }}</p>
+            {% endfor %}
+        </ul>
+
+        <form action="{% url 'petmon:shop_control' 'clean_cart' %}" method="post">
+            {% csrf_token %}
+            <button type="submit">Clean Cart</button>
+        </form>
+
+        <form action="{% url 'petmon:shop_control' 'buy' %}" method="post">
+            {% csrf_token %}
+            <button type="submit">Buy</button>
+        </form>
+    {% else %}
+        <p>Empty cart</p>
+    {% endif %}
+
+    <h3>Shop Items</h3>
+    {% if object_list %}
+        <ul>
+            {% for item in object_list %}
+                <form id="shopForm" action="{% url 'petmon:shop_control' 'add_to_cart' %}" method="get">
+                    <input type="hidden" name="id" value="{{ item.id }}"/>
                     <li>{{ item.name }}</li>
                     <p>Price: {{ item.price }}</p>
-                    <label>Amount: <input type="text" name="{{ item.id }}"></label>
-                {% endfor %}
-            {% else %}
-                <p>Store is empty.</p>
-            {% endif %}
+                    <label>Amount: <input type="text" name="count"></label>
+                    <button type="submit">Add to cart</button>
+                </form>
+            {% endfor %}
         </ul>
-        <button type="submit">Buy</button>
-    </form>
+    {% endif %}
+
+    {#    <h3>Shop Items</h3>#}
+    {#    <form id="shopForm" action="{% url 'petmon:shop_control' 'buy' %}" method="post">#}
+    {#        {% csrf_token %}#}
+    {#        <ul>#}
+    {#            {% if object_list %}#}
+    {#                {% for item in object_list %}#}
+    {#                        <li>{{ item.name }}</li>#}
+    {#                        <p>Price: {{ item.price }}</p>#}
+    {#                        <label>Amount: <input type="text" name="{{ item.id }}"></label>#}
+    {#                {% endfor %}#}
+    {#            {% else %}#}
+    {#                <p>Store is empty.</p>#}
+    {#            {% endif %}#}
+    {#        </ul>#}
+    {#        <button type="submit">Buy</button>#}
+    {#    </form>#}
 {% endblock %}
