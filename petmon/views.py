@@ -133,7 +133,6 @@ class PetView(BaseMixin, View):
 
         if slug == 'choose':
             context = super(PetView, self).get_context_data()
-
             return render(self.request, 'petmon/choose.html', context)
 
         elif slug.isdecimal():
@@ -165,6 +164,7 @@ class PetView(BaseMixin, View):
         slug = self.kwargs.get('slug')
         context = self.get_context_data()
         user = context['log_user']
+
         try:
             item = Repo.objects.get(pk=int(slug), owner=user)
         except ObjectDoesNotExist:
@@ -174,18 +174,22 @@ class PetView(BaseMixin, View):
 
         try:
             self.request.session['feed'][slug] += 1
+            self.request.session['feed_item'][item.commodity.name] += 1
         except KeyError as e:
             if e.args[0] == 'feed':
+                self.request.session['feed_item'] = dict()
                 self.request.session['feed'] = dict()
+                self.request.session['feed_item'][item.commodity.name] = 1
                 self.request.session['feed'][slug] = 1
             else:
+                self.request.session['feed_item'][item.commodity.name] = 1
                 self.request.session['feed'][slug] = 1
         else:
             pass
 
         self.request.session.modified = True
         context['pet'] = user.pet
-        context['feed'] = self.request.session['feed']
+        context['feed'] = self.request.session['feed_item']
 
         return render(self.request, 'petmon/pet_info.html', context)
 
@@ -235,6 +239,7 @@ class PetView(BaseMixin, View):
         pet.save()
         context['pet'] = pet
         del self.request.session['feed']
+        del self.request.session['feed_item']
         self.request.session.modified = True
 
         return render(self.request, 'petmon/pet_info.html', context)
@@ -253,6 +258,9 @@ class StoreView(BaseMixin, ListView):
 class BuyView(BaseMixin, View):
     def post(self, *args, **kwargs):
         slug = self.kwargs.get('slug')
+
+        if not self.request.user.is_active:
+            raise Http404
 
         if slug == 'buy':
             return self.buy()
@@ -286,7 +294,7 @@ class BuyView(BaseMixin, View):
             try:
                 boughtitem.save()
             except Exception:
-                return render(reverse('petmon:store'))
+                return render(reverse('petmon:store'), context)
 
         context['object_list'] = Repo.objects.filter(owner=context['log_user'])
 
