@@ -136,11 +136,8 @@ class PetView(BaseMixin, View):
             context = super(PetView, self).get_context_data()
             return render(self.request, 'petmon/choose.html', context)
 
-        elif slug.isdecimal():
+        elif slug == 'add_feed':
             return self.addfeed()
-
-        elif slug == 'clean_feed':
-            return self.cleanfeed()
 
         else:
             raise Http404
@@ -154,46 +151,63 @@ class PetView(BaseMixin, View):
         elif slug == 'feed':
             return self.feed()
 
+        elif slug == 'clean_feed':
+            return self.cleanfeed()
+
         else:
             raise Http404
 
     def get_context_data(self, **kwargs):
         context = super(PetView, self).get_context_data()
-        context['object_list'] = Repo.objects.filter(owner=context['log_user'])
-        context['owner'] = context['log_user']
+        user = context['log_user']
+        context['object_list'] = Repo.objects.filter(owner=user)
+        context['owner'] = user
+        context['pet'] = user.pet
 
         return context
 
     def addfeed(self):
-        slug = self.kwargs.get('slug')
         context = self.get_context_data()
+        item_id = self.request.GET.get('id')
         user = context['log_user']
 
         try:
-            item = Repo.objects.get(pk=int(slug), owner=user)
+            count = int(self.request.GET.get('count'))
+        except ValueError:
+            try:
+                context['feed'] = self.request.session['feed_item']
+            except KeyError:
+                pass
+
+            context['my_item'] = Repo.objects.filter(owner=user)
+
+            return render(self.request, 'petmon/pet_info.html', context)
+
+        try:
+            item = Repo.objects.get(pk=item_id)
         except ObjectDoesNotExist:
             raise Http404
         else:
             pass
 
         try:
-            self.request.session['feed'][slug] += 1
-            self.request.session['feed_item'][item.commodity.name] += 1
+            self.request.session['feed'][item_id] += count
+            self.request.session['feed_item'][item.commodity.name] += count
         except KeyError as e:
             if e.args[0] == 'feed':
                 self.request.session['feed_item'] = dict()
                 self.request.session['feed'] = dict()
-                self.request.session['feed_item'][item.commodity.name] = 1
-                self.request.session['feed'][slug] = 1
+                self.request.session['feed_item'][item.commodity.name] = count
+                self.request.session['feed'][item_id] = count
             else:
-                self.request.session['feed_item'][item.commodity.name] = 1
-                self.request.session['feed'][slug] = 1
+                self.request.session['feed_item'][item.commodity.name] = count
+                self.request.session['feed'][item_id] = count
         else:
             pass
 
         self.request.session.modified = True
-        context['pet'] = user.pet
         context['feed'] = self.request.session['feed_item']
+        context['my_item'] = Repo.objects.filter(owner=user)
 
         return render(self.request, 'petmon/pet_info.html', context)
 
@@ -228,12 +242,12 @@ class PetView(BaseMixin, View):
         context = self.get_context_data()
         feeds = self.request.session['feed']
         fails = dict()
-        satiation, lush = 0, 0
         user = context['log_user']
         pet = Pet.objects.get(owner=user)
 
         for k, v in feeds.items():
             item = Repo.objects.get(pk=k)
+            satiation, lush = 0, 0
             if item.count >= v:
                 satiation += v * item.commodity.satiation
                 lush += v * item.commodity.lush
