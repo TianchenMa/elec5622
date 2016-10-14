@@ -31,6 +31,7 @@ class BaseMixin(ContextMixin):
 
 
 class IndexView(BaseMixin, TemplateView):
+
     template_name = 'petmon/index.html'
 
     def get_context_data(self, **kwargs):
@@ -138,6 +139,9 @@ class PetView(BaseMixin, View):
         elif slug.isdecimal():
             return self.addfeed()
 
+        elif slug == 'clean_feed':
+            return self.cleanfeed()
+
         else:
             raise Http404
 
@@ -190,6 +194,14 @@ class PetView(BaseMixin, View):
         self.request.session.modified = True
         context['pet'] = user.pet
         context['feed'] = self.request.session['feed_item']
+
+        return render(self.request, 'petmon/pet_info.html', context)
+
+    def cleanfeed(self):
+        del self.request.session['feed']
+        del self.request.session['feed_item']
+        context = self.get_context_data()
+        context['pet'] = context['log_user'].pet
 
         return render(self.request, 'petmon/pet_info.html', context)
 
@@ -246,6 +258,7 @@ class PetView(BaseMixin, View):
 
 
 class StoreView(BaseMixin, ListView):
+
     model = Commodity
     template_name = 'petmon/store.html'
 
@@ -302,6 +315,7 @@ class BuyView(BaseMixin, View):
 
 
 class RepoView(BaseMixin, ListView):
+
     model = Repo
     template_name = 'petmon/my_repo.html'
 

@@ -13,6 +13,7 @@
             {% for item, count in feed.items %}
                 <p>Item: {{ item }} - Count: {{ count }}</p>
             {% endfor %}
+            <a href="{% url 'petmon:pet' 'clean_feed' %}">Clean</a>
             <form action="{% url 'petmon:pet' 'feed' %}" method="post">
                 {% csrf_token %}
                 <button type="submit">Feed</button>
