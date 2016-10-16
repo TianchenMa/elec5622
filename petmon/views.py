@@ -1,15 +1,11 @@
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import F
-from django.db.models import Q
-from django.http import Http404
-from django.http import HttpResponseRedirect
+from django.db.models import F, Q
+from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
-from django.views.generic import DetailView
-from django.views.generic import ListView
-from django.views.generic import TemplateView
+from django.views.generic import ListView, TemplateView
 from django.views.generic.base import ContextMixin
 
 from petmon.forms import LoginForm, PetChooseForm

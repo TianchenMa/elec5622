@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from elec5622 import settings
+
 
 # Create your models here.
 GENDER = {
@@ -44,6 +46,10 @@ class User(AbstractUser):
     gender = models.IntegerField(default=0, choices=GENDER.items())
     step = models.IntegerField(default=0)
     intro = models.CharField(max_length=200, null=True)
+    friends = models.ManyToManyField(settings.AUTH_USER_MODEL)
+
+    class Meta:
+        ordering = ['id']
 
 
 class Pet(models.Model):
@@ -63,6 +69,9 @@ class Pet(models.Model):
         self.defence = ATTRIBUTE[self.kind]['defence']
         self.speed = ATTRIBUTE[self.kind]['speed']
 
+    class Meta:
+        ordering = ['id']
+
 
 class Commodity(models.Model):
     name = models.CharField(max_length=50, null=False)
@@ -75,8 +84,14 @@ class Commodity(models.Model):
     defence = models.IntegerField(null=False)
     speed = models.IntegerField(null=False)
 
+    class Meta:
+        ordering = ['id']
+
 
 class Repo(models.Model):
     commodity = models.ForeignKey(Commodity, on_delete=models.CASCADE)
     count = models.IntegerField(null=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ['id']
