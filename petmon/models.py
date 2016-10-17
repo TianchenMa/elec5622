@@ -2,18 +2,17 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from elec5622 import settings
 
-
 # Create your models here.
-GENDER = {
-    '0': u'Male',
-    '1': u'Female'
-}
+GENDER = (
+    ('0', u'Male'),
+    ('1', u'Female')
+)
 
-KIND = {
-    '0': u'Fire',
-    '1': u'Water',
-    '2': u'Plant',
-}
+KIND = (
+    ('0', u'Fire'),
+    ('1', u'Water'),
+    ('2', u'Plant'),
+)
 
 ITEM_KIND = (
     ('0', 'food'),
@@ -43,18 +42,37 @@ ATTRIBUTE = {
 
 
 class User(AbstractUser):
-    gender = models.IntegerField(default=0, choices=GENDER.items())
+    gender = models.CharField(max_length=1, default='0', choices=GENDER)
     step = models.IntegerField(default=0)
-    intro = models.CharField(max_length=200, null=True)
-    friends = models.ManyToManyField(settings.AUTH_USER_MODEL)
+    intro = models.CharField(max_length=200, null=True, blank=True)
+    friends = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='Relationship',
+        through_fields=('from_user', 'to_user')
+    )
 
     class Meta:
         ordering = ['id']
 
 
+class Relationship(models.Model):
+    from_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='from_user'
+    )
+    to_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='to_user'
+    )
+    reviewed = models.BooleanField(default=False)
+    add_date = models.DateTimeField('Date added.')
+
+
 class Pet(models.Model):
     name = models.CharField(max_length=50, null=False)
-    kind = models.CharField(max_length=1)
+    kind = models.CharField(max_length=1, choices=KIND, default='0')
     owner = models.OneToOneField(User, on_delete=models.CASCADE)
     hp = models.IntegerField(null=False)
     attack = models.IntegerField(null=False)
