@@ -1,6 +1,9 @@
+import logging
+
 from django.contrib.auth import authenticate, login, logout
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.db.models import F, Q
+from django.utils import timezone
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
@@ -9,7 +12,7 @@ from django.views.generic import ListView, TemplateView
 from django.views.generic.base import ContextMixin
 
 from petmon.forms import LoginForm, PetChooseForm
-from petmon.models import User, Pet, Commodity, Repo
+from petmon.models import User, Pet, Commodity, Repo, Relationship
 
 
 # Create your views here.
@@ -42,16 +45,6 @@ class UserControlView(BaseMixin, View):
 
         if slug == 'signup':
             return render(self.request, 'petmon/signup.html')
-        elif slug.isdecimal():
-            context = super(UserControlView, self).get_context_data()
-            if User.objects.filter(pk=slug).exists():
-                user = User.objects.get(pk=slug)
-            else:
-                raise Http404
-            context['pet'] = user.pet
-            context['owner'] = user
-
-            return render(self.request, 'petmon/pet_info.html', context)
         else:
             return HttpResponseRedirect(reverse('petmon:index'))
 
@@ -103,6 +96,69 @@ class UserControlView(BaseMixin, View):
             pass
 
         return render(self.request, 'petmon/choose.html')
+
+
+class UserView(BaseMixin, View):
+    def get(self, *args, **kwargs):
+        slug = self.kwargs.get('slug')
+
+        if slug == 'homepage':
+            return self.homepage()
+        else:
+            raise Http404
+
+    def post(self, *args, **kwargs):
+        slug = self.kwargs.get('slug')
+
+        if slug == 'friend_control':
+            return self.add_or_remove_friend()
+        else:
+            raise PermissionDenied
+
+    def get_context_data(self, **kwargs):
+        context = super(UserView, self).get_context_data()
+        user_id = self.kwargs.get('user_id')
+
+        if User.objects.filter(pk=user_id).exists():
+            user = User.objects.get(pk=user_id)
+        else:
+            raise Http404
+
+        log_user = context['log_user']
+        context['pet'] = user.pet
+        context['owner'] = user
+
+        try:
+            context['added_friend'] = user in log_user.friends.all()
+        except AttributeError:
+            context['added_friend'] = False
+
+        return context
+
+    def homepage(self):
+        context = self.get_context_data()
+
+        return render(self.request, 'petmon/pet_info.html', context)
+
+    def add_or_remove_friend(self):
+        context = self.get_context_data()
+        added_user = context['owner']
+        log_user = context['log_user']
+
+        if type(log_user) is User:
+            if not context['added_friend']:
+                relationship = Relationship.objects.create(
+                    from_user=log_user,
+                    to_user=added_user,
+                    add_date=timezone.now()
+                )
+                relationship.save()
+                context['added_friend'] = True
+            else:
+                Relationship.objects.filter(from_user=log_user, to_user=added_user).delete()
+                context['added_friend'] = False
+
+        return render(self.request, 'petmon/pet_info.html', context)
 
 
 class MyPetView(BaseMixin, TemplateView):
