@@ -3,7 +3,14 @@
 {% block content %}
     {% if not owner.id == log_user.id %}
         <h3>{{ owner.username }}' Pets</h3>
-        <a href="">Add Friend</a>
+        <form action="{% url 'petmon:user' owner.id 'friend_control' %}" method="post">
+            {% csrf_token %}
+            {% if added_friend %}
+                <button type="submit">Remove Friend</button>
+            {% else %}
+                <button type="submit">Add Friend</button>
+            {% endif %}
+        </form>
     {% else %}
         <h3>My Pets</h3>
         <a href="{% url 'petmon:pet' 'choose' %}">Add Pet</a>
