@@ -1,5 +1,3 @@
-import logging
-
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.db.models import F, Q
@@ -21,6 +19,7 @@ class BaseMixin(ContextMixin):
         context = super(BaseMixin, self).get_context_data(**kwargs)
         if self.request.user.is_active:
             user = User.objects.get(pk=self.request.user.id)
+            context['friend_rank'] = user.friends.order_by('-pet__rank')[:10]
         else:
             user = None
 
@@ -29,6 +28,7 @@ class BaseMixin(ContextMixin):
         return context
 
 
+# URL name = 'index'
 class IndexView(BaseMixin, TemplateView):
     template_name = 'petmon/index.html'
 
@@ -39,6 +39,7 @@ class IndexView(BaseMixin, TemplateView):
         return context
 
 
+# URL name = 'user_control'
 class UserControlView(BaseMixin, View):
     def get(self, *args, **kwargs):
         slug = self.kwargs.get('slug')
@@ -95,9 +96,11 @@ class UserControlView(BaseMixin, View):
         except Exception:
             pass
 
-        return render(self.request, 'petmon/choose.html')
+        # return render(self.request, 'petmon/choose.html')
+        return HttpResponseRedirect(reverse('petmon:pet', kwargs={'slug': 'choose'}))
 
 
+# URL name = 'user'
 class UserView(BaseMixin, View):
     def get(self, *args, **kwargs):
         slug = self.kwargs.get('slug')
@@ -153,14 +156,13 @@ class UserView(BaseMixin, View):
                     add_date=timezone.now()
                 )
                 relationship.save()
-                context['added_friend'] = True
             else:
                 Relationship.objects.filter(from_user=log_user, to_user=added_user).delete()
-                context['added_friend'] = False
 
-        return render(self.request, 'petmon/pet_info.html', context)
+        return HttpResponseRedirect(reverse('petmon:user', kwargs={'user_id': added_user.id, 'slug': 'homepage'}))
 
 
+# URL name = 'my_pet'
 class MyPetView(BaseMixin, TemplateView):
     template_name = 'petmon/pet_info.html'
 
@@ -171,13 +173,14 @@ class MyPetView(BaseMixin, TemplateView):
         context['pet'] = user.pet
         context['object_list'] = Repo.objects.filter(owner=context['log_user'])
         try:
-            context['feed'] = self.request.session['feed']
+            context['feed'] = self.request.session['feed_item']
         except KeyError:
             pass
 
         return context
 
 
+# URL name = 'pet'
 class PetView(BaseMixin, View):
     def get(self, *args, **kwargs):
         slug = self.kwargs.get('slug')
@@ -196,7 +199,7 @@ class PetView(BaseMixin, View):
         slug = self.kwargs.get('slug')
 
         if slug == 'choose':
-            return self.choose_item()
+            return self.choose_pet()
 
         elif slug == 'feed':
             return self.feed_pet()
@@ -205,7 +208,7 @@ class PetView(BaseMixin, View):
             return self.clean_feed_basket()
 
         else:
-            raise Http404
+            raise PermissionDenied
 
     def get_context_data(self, **kwargs):
         context = super(PetView, self).get_context_data()
@@ -217,26 +220,17 @@ class PetView(BaseMixin, View):
         return context
 
     def add_to_feed(self):
-        context = self.get_context_data()
         item_id = self.request.GET.get('id')
-        user = context['log_user']
 
         try:
             count = int(self.request.GET.get('count'))
         except ValueError:
-            try:
-                context['feed'] = self.request.session['feed_item']
-            except KeyError:
-                pass
-
-            context['my_item'] = Repo.objects.filter(owner=user)
-
-            return render(self.request, 'petmon/pet_info.html', context)
+            return HttpResponseRedirect(reverse('petmon:my_pet'))
 
         try:
             item = Repo.objects.get(pk=item_id)
         except ObjectDoesNotExist:
-            raise Http404
+            return HttpResponseRedirect(reverse('petmon:my_pet'))
         else:
             pass
 
@@ -256,20 +250,16 @@ class PetView(BaseMixin, View):
             pass
 
         self.request.session.modified = True
-        context['feed'] = self.request.session['feed_item']
-        context['my_item'] = Repo.objects.filter(owner=user)
 
-        return render(self.request, 'petmon/pet_info.html', context)
+        return HttpResponseRedirect(reverse('petmon:my_pet'))
 
     def clean_feed_basket(self):
         del self.request.session['feed']
         del self.request.session['feed_item']
-        context = self.get_context_data()
-        context['pet'] = context['log_user'].pet
 
-        return render(self.request, 'petmon/pet_info.html', context)
+        return HttpResponseRedirect(reverse('petmon:my_pet'))
 
-    def choose_item(self):
+    def choose_pet(self):
         form = PetChooseForm(self.request.POST)
         if form.is_valid():
             context = super(PetView, self).get_context_data()
@@ -280,13 +270,9 @@ class PetView(BaseMixin, View):
             pet.assign_attribute()
             pet.save()
         else:
-            return render(self.request, 'petmon/choose.html')
+            return HttpResponseRedirect(reverse('petmon:pet', kwargs={'slug': 'choose'}))
 
-        context = self.get_context_data()
-        user = context['log_user']
-        context['pet'] = user.pet
-
-        return render(self.request, 'petmon/pet_info.html', context)
+        return HttpResponseRedirect(reverse('petmon:my_pet'))
 
     def feed_pet(self):
         context = self.get_context_data()
@@ -312,15 +298,16 @@ class PetView(BaseMixin, View):
             else:
                 fails[k] = v
 
+        pet.refresh_rank()
         pet.save()
-        context['pet'] = pet
         del self.request.session['feed']
         del self.request.session['feed_item']
         self.request.session.modified = True
 
-        return render(self.request, 'petmon/pet_info.html', context)
+        return HttpResponseRedirect(reverse('petmon:my_pet'))
 
 
+# URL name = 'store'
 class StoreView(BaseMixin, ListView):
     model = Commodity
     template_name = 'petmon/store.html'
@@ -342,6 +329,7 @@ class StoreView(BaseMixin, ListView):
         return context
 
 
+# URL name = 'shop_control'
 class BuyView(BaseMixin, View):
     def get(self, *args, **kwargs):
         slug = self.kwargs.get('slug')
@@ -351,7 +339,7 @@ class BuyView(BaseMixin, View):
             if self.request.user.is_active:
                 return self.add_to_cart()
             else:
-                return HttpResponseRedirect(reverse('petmon:store'), context)
+                return HttpResponseRedirect(reverse('petmon:store'))
         else:
             raise Http404
 
@@ -366,7 +354,7 @@ class BuyView(BaseMixin, View):
         elif slug == 'clean_cart':
             return self.clean_cart()
         else:
-            raise Http404
+            raise PermissionDenied
 
     def get_context_data(self, **kwargs):
         context = super(BuyView, self).get_context_data()
@@ -377,30 +365,22 @@ class BuyView(BaseMixin, View):
         return context
 
     def add_to_cart(self):
-        context = self.get_context_data()
         comm_id = self.request.GET.get('id')
-        user = context['log_user']
 
         try:
             count = int(self.request.GET.get('count'))
 
             if count <= 0:
                 raise ValueError
+
         except ValueError:
-            try:
-                context['cart'] = self.request.session['cart_item']
-                context['amount'] = self.request.session['amount']
-            except KeyError:
-                pass
 
-            context['my_item'] = Repo.objects.filter(owner=user)
-
-            return render(self.request, 'petmon/store.html', context)
+            return HttpResponseRedirect(reverse('petmon:store'))
 
         try:
             comm = Commodity.objects.get(pk=int(comm_id))
         except ObjectDoesNotExist:
-            raise Http404
+            return HttpResponseRedirect(reverse('petmon:store'))
         else:
             pass
 
@@ -424,20 +404,15 @@ class BuyView(BaseMixin, View):
             pass
 
         self.request.session.modified = True
-        context['cart'] = self.request.session['cart_item']
-        context['my_item'] = Repo.objects.filter(owner=user)
-        context['amount'] = self.request.session['amount']
 
-        return render(self.request, 'petmon/store.html', context)
+        return HttpResponseRedirect(reverse('petmon:store'))
 
     def clean_cart(self):
-        context = self.get_context_data()
-        context['my_item'] = Repo.objects.filter(owner=context['log_user'])
         del self.request.session['cart']
         del self.request.session['cart_item']
         del self.request.session['amount']
 
-        return HttpResponseRedirect(reverse('petmon:store'), context)
+        return HttpResponseRedirect(reverse('petmon:store'))
 
     def buy(self):
         cart = self.request.session['cart']
@@ -449,7 +424,7 @@ class BuyView(BaseMixin, View):
             context['my_item'] = Repo.objects.filter(owner=owner)
             context['amount'] = amount
 
-            return HttpResponseRedirect(reverse('petmon:store'), context)
+            return HttpResponseRedirect(reverse('petmon:store'))
         else:
             owner.step -= amount
             owner.save()
@@ -469,17 +444,16 @@ class BuyView(BaseMixin, View):
             try:
                 boughtitem.save()
             except Exception:
-                return HttpResponseRedirect(reverse('petmon:store'), context)
+                return HttpResponseRedirect(reverse('petmon:store'))
 
         del self.request.session['cart']
         del self.request.session['cart_item']
         del self.request.session['amount']
 
-        context['my_item'] = Repo.objects.filter(owner=owner)
-
-        return HttpResponseRedirect(reverse('petmon:store'), context)
+        return HttpResponseRedirect(reverse('petmon:store'))
 
 
+# URL name = 'repo'
 class RepoView(BaseMixin, ListView):
     model = Repo
     template_name = 'petmon/my_repo.html'
