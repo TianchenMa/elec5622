@@ -3,20 +3,22 @@
 {% block content %}
     {% if not owner.id == log_user.id %}
         <h3>{{ owner.username }}' Pets</h3>
+        <form action="{% url 'petmon:user' owner.id 'friend_control' %}" method="post">
+            {% csrf_token %}
+            {% if added_friend %}
+                <button type="submit">Remove Friend</button>
+            {% else %}
+                <button type="submit">Add Friend</button>
+            {% endif %}
+        </form>
     {% else %}
         <h3>My Pets</h3>
         <a href="{% url 'petmon:pet' 'choose' %}">Add Pet</a>
     {% endif %}
 
-    <div id="added-stuff">
-        {% for item, count in feed.items %}
-            Item: {{ item }}
-            Count: {{ count }}
-        {% endfor %}
-    </div>
-
     {% if pet %}
         <p>Name: {{ pet.name }}</p>
+        <p>Rank: {{ pet.rank }}</p>
         <p>Kind: {{ pet.kind }}</p>
         <p>HP: {{ pet.hp }}</p>
         <p>Attack: {{ pet.attack }}</p>
@@ -27,17 +29,48 @@
     {% endif %}
 
     <br>
-    <h3>My items</h3>
 
-    {% if object_list %}
-        <ul>
-            {% for item in object_list %}
-                <li>Name: {{ item.commodity.name }}</li>
-                <p>Count: {{ item.count }}</p>
-                <a href="{% url 'petmon:pet' item.id %}">Add to feed</a>
-            {% endfor %}
-        </ul>
-    {% else %}
-        Empty repo.
+    {% if owner.id == log_user.id %}
+        <div id="items-to-feed">
+            <h3>Items to feed</h3>
+            {% if feed %}
+                <ul>
+                    {% for itemname, count in feed.items %}
+                        <li>Name: {{ itemname }}</li>
+                        <p>Count: {{ count }}</p>
+                    {% endfor %}
+                </ul>
+
+                <form action="{% url 'petmon:pet' 'clean_feed' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit">Clean Feed Items</button>
+                </form>
+
+                <form action="{% url 'petmon:pet' 'feed' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit">Feed</button>
+                </form>
+            {% else %}
+                <p>No items to feed.</p>
+            {% endif %}
+        </div>
+
+        <h3>My items</h3>
+
+        {% if object_list %}
+            <ul>
+                {% for item in object_list %}
+                    <form action="{% url 'petmon:pet' 'add_feed' %}" method="get">
+                        <input type="hidden" name="id" value="{{ item.id }}"/>
+                        <li>Name: {{ item.commodity.name }}</li>
+                        <p>Count: {{ item.count }}</p>
+                        <label>Amount: <input type="text" name="count"></label>
+                        <button type="submit">Add to feed</button>
+                    </form>
+                {% endfor %}
+            </ul>
+        {% else %}
+            Empty repo.
+        {% endif %}
     {% endif %}
 {% endblock %}

@@ -1,6 +1,6 @@
 from django.conf.urls import url
 
-from petmon.views import UserControlView, PetView, StoreView, BuyView, RepoView, MyPetView
+from petmon.views import UserControlView, PetView, StoreView, BuyView, RepoView, MyPetView, UserView
 from petmon.views import IndexView
 
 
@@ -9,6 +9,8 @@ urlpatterns = [
     url(r'^$', IndexView.as_view(), name='index'),
 
     url(r'^(?P<slug>\w+)$', UserControlView.as_view(), name='user_control'),
+
+    url(r'^(?P<user_id>[0-9]+)/(?P<slug>\w+)$', UserView.as_view(), name='user'),
 
     url(r'^pet/$', MyPetView.as_view(), name='my_pet'),
 
