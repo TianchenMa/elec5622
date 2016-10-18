@@ -28,11 +28,25 @@
     <a href="{% url 'petmon:store' %}">Store</a>
 </div>
 <br>
+
 <div id="main">
     {% block content %}
     {% endblock %}
 </div>
 
 <a href="{% url 'petmon:index' %}">Index</a>
+
+<div>
+    {% if friend_rank %}
+        <ul>
+            {% for friend in friend_rank %}
+                <li>{{ forloop.counter }}: {{ friend.username }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No friends.</p>
+    {% endif %}
+</div>
+
 </body>
 </html>
