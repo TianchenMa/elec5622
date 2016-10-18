@@ -51,6 +51,9 @@ class User(AbstractUser):
         through_fields=('from_user', 'to_user')
     )
 
+    def __str__(self):
+        return self.username
+
     class Meta:
         ordering = ['id']
 
@@ -80,12 +83,17 @@ class Pet(models.Model):
     speed = models.IntegerField(null=False)
     satiation = models.IntegerField(null=False, default=100)
     lush = models.IntegerField(null=False, default=100)
+    rank = models.IntegerField(null=False)
 
     def assign_attribute(self):
         self.hp = ATTRIBUTE[self.kind]['hp']
         self.attack = ATTRIBUTE[self.kind]['attack']
         self.defence = ATTRIBUTE[self.kind]['defence']
         self.speed = ATTRIBUTE[self.kind]['speed']
+        self.rank = self.hp + self.attack + self.defence + self.speed
+
+    def refresh_rank(self):
+        self.rank = self.hp + self.attack + self.defence + self.speed
 
     class Meta:
         ordering = ['id']
