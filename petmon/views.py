@@ -1,10 +1,12 @@
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.db.models import F, Q
 from django.utils import timezone
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic import ListView, TemplateView
 from django.views.generic.base import ContextMixin
@@ -15,6 +17,7 @@ from petmon.models import User, Pet, Commodity, Repo, Relationship
 
 # Create your views here.
 class BaseMixin(ContextMixin):
+    # def get_context_data(self, **kwargs):
     def get_context_data(self, **kwargs):
         context = super(BaseMixin, self).get_context_data(**kwargs)
         if self.request.user.is_active:
@@ -33,7 +36,7 @@ class IndexView(BaseMixin, TemplateView):
     template_name = 'petmon/index.html'
 
     def get_context_data(self, **kwargs):
-        context = super(IndexView, self).get_context_data(**kwargs)
+        context = super(IndexView, self).get_context_data()
         context['users'] = User.objects.all()
 
         return context
@@ -62,6 +65,13 @@ class UserControlView(BaseMixin, View):
             return HttpResponseRedirect(reverse('petmon:index'))
 
     def login(self):
+        # context = super(UserControlView, self).get_context_data()
+
+        try:
+            next_page = self.request.POST['next']
+        except KeyError:
+            next_page = self.request.META['HTTP_REFERER']
+
         form = LoginForm(self.request.POST)
         if form.is_valid():
             username = form.cleaned_data['username']
@@ -71,15 +81,16 @@ class UserControlView(BaseMixin, View):
             if user is not None:
                 self.request.session.set_expiry(0)
                 login(self.request, user)
-                context = dict()
-                context['log_user'] = user
+                # context = dict()
+                # context['log_user'] = user
 
-        return HttpResponseRedirect(reverse('petmon:index'))
+        return HttpResponseRedirect(next_page)
 
     def logout(self):
         logout(self.request)
+        next_page = self.request.META['HTTP_REFERER']
 
-        return HttpResponseRedirect(reverse('petmon:index'))
+        return HttpResponseRedirect(next_page)
 
     def signup(self):
         user_name = self.request.POST['username']
@@ -107,14 +118,19 @@ class UserView(BaseMixin, View):
 
         if slug == 'homepage':
             return self.homepage()
+        elif slug == 'friend_control':
+            user_id = self.kwargs.get('user_id')
+
+            return HttpResponseRedirect(reverse('petmon:user', kwargs={'slug': 'homepage',
+                                                                       'user_id': user_id}))
         else:
             raise Http404
 
-    def post(self, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         slug = self.kwargs.get('slug')
 
         if slug == 'friend_control':
-            return self.add_or_remove_friend()
+            return self.add_or_remove_friend(self.request)
         else:
             raise PermissionDenied
 
@@ -128,7 +144,11 @@ class UserView(BaseMixin, View):
             raise Http404
 
         log_user = context['log_user']
-        context['pet'] = user.pet
+        try:
+            context['pet'] = user.pet
+        except AttributeError:
+            pass
+
         context['owner'] = user
 
         try:
@@ -143,23 +163,25 @@ class UserView(BaseMixin, View):
 
         return render(self.request, 'petmon/pet_info.html', context)
 
-    def add_or_remove_friend(self):
+    @method_decorator(login_required)
+    def add_or_remove_friend(self, request):
         context = self.get_context_data()
         added_user = context['owner']
         log_user = context['log_user']
 
-        if type(log_user) is User:
-            if not context['added_friend']:
-                relationship = Relationship.objects.create(
-                    from_user=log_user,
-                    to_user=added_user,
-                    add_date=timezone.now()
-                )
-                relationship.save()
-            else:
-                Relationship.objects.filter(from_user=log_user, to_user=added_user).delete()
+        # if type(log_user) is User:
+        if not context['added_friend']:
+            relationship = Relationship.objects.create(
+                from_user=log_user,
+                to_user=added_user,
+                add_date=timezone.now()
+            )
+            relationship.save()
+        else:
+            Relationship.objects.filter(from_user=log_user, to_user=added_user).delete()
 
-        return HttpResponseRedirect(reverse('petmon:user', kwargs={'user_id': added_user.id, 'slug': 'homepage'}))
+        return HttpResponseRedirect(
+            reverse('petmon:user', kwargs={'user_id': added_user.id, 'slug': 'homepage'}))
 
 
 # URL name = 'my_pet'
@@ -170,7 +192,12 @@ class MyPetView(BaseMixin, TemplateView):
         context = super(MyPetView, self).get_context_data()
         user = context['log_user']
         context['owner'] = user
-        context['pet'] = user.pet
+
+        try:
+            context['pet'] = user.pet
+        except AttributeError:
+            pass
+
         context['object_list'] = Repo.objects.filter(owner=context['log_user'])
         try:
             context['feed'] = self.request.session['feed_item']
@@ -188,10 +215,10 @@ class PetView(BaseMixin, View):
         if slug == 'choose':
             context = super(PetView, self).get_context_data()
             return render(self.request, 'petmon/choose.html', context)
-
         elif slug == 'add_feed':
-            return self.add_to_feed()
-
+            return self.add_to_feed(self.request)
+        elif slug == 'feed':
+            return HttpResponseRedirect(reverse('petmon:my_pet'))
         else:
             raise Http404
 
@@ -199,10 +226,10 @@ class PetView(BaseMixin, View):
         slug = self.kwargs.get('slug')
 
         if slug == 'choose':
-            return self.choose_pet()
+            return self.choose_pet(self.request)
 
         elif slug == 'feed':
-            return self.feed_pet()
+            return self.feed_pet(self.request)
 
         elif slug == 'clean_feed':
             return self.clean_feed_basket()
@@ -219,7 +246,8 @@ class PetView(BaseMixin, View):
 
         return context
 
-    def add_to_feed(self):
+    @method_decorator(login_required)
+    def add_to_feed(self, request):
         item_id = self.request.GET.get('id')
 
         try:
@@ -259,22 +287,25 @@ class PetView(BaseMixin, View):
 
         return HttpResponseRedirect(reverse('petmon:my_pet'))
 
-    def choose_pet(self):
-        form = PetChooseForm(self.request.POST)
-        if form.is_valid():
-            context = super(PetView, self).get_context_data()
-            log_user = context['log_user']
-            pet_name = form.cleaned_data['pet_name']
-            pet_kind = form.cleaned_data['pet_kind']
-            pet = Pet(name=pet_name, kind=pet_kind, owner=log_user)
-            pet.assign_attribute()
-            pet.save()
-        else:
-            return HttpResponseRedirect(reverse('petmon:pet', kwargs={'slug': 'choose'}))
+    @method_decorator(login_required)
+    def choose_pet(self, request):
+        context = super(PetView, self).get_context_data()
+        log_user = context['log_user']
+        if log_user.pet is None:
+            form = PetChooseForm(self.request.POST)
+            if form.is_valid():
+                pet_name = form.cleaned_data['pet_name']
+                pet_kind = form.cleaned_data['pet_kind']
+                pet = Pet(name=pet_name, kind=pet_kind, owner=log_user)
+                pet.assign_attribute()
+                pet.save()
+            else:
+                return HttpResponseRedirect(reverse('petmon:pet', kwargs={'slug': 'choose'}))
 
         return HttpResponseRedirect(reverse('petmon:my_pet'))
 
-    def feed_pet(self):
+    @method_decorator(login_required)
+    def feed_pet(self, request):
         context = self.get_context_data()
         feeds = self.request.session['feed']
         fails = dict()
@@ -336,21 +367,15 @@ class BuyView(BaseMixin, View):
         context = super(BuyView, self).get_context_data()
 
         if slug == 'add_to_cart':
-            if self.request.user.is_active:
-                return self.add_to_cart()
-            else:
-                return HttpResponseRedirect(reverse('petmon:store'))
+            return self.add_to_cart(self.request)
         else:
             raise Http404
 
     def post(self, *args, **kwargs):
         slug = self.kwargs.get('slug')
 
-        if not self.request.user.is_active:
-            raise Http404
-
         if slug == 'buy':
-            return self.buy()
+            return self.buy(self.request)
         elif slug == 'clean_cart':
             return self.clean_cart()
         else:
@@ -364,7 +389,8 @@ class BuyView(BaseMixin, View):
 
         return context
 
-    def add_to_cart(self):
+    @method_decorator(login_required)
+    def add_to_cart(self, request):
         comm_id = self.request.GET.get('id')
 
         try:
@@ -414,7 +440,8 @@ class BuyView(BaseMixin, View):
 
         return HttpResponseRedirect(reverse('petmon:store'))
 
-    def buy(self):
+    @method_decorator(login_required)
+    def buy(self, request):
         cart = self.request.session['cart']
         context = self.get_context_data()
         owner = context['log_user']
