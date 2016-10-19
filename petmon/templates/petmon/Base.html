@@ -11,6 +11,9 @@
             {% csrf_token %}
             User name: <input type="text" name="username">
             Password: <input type="password" name="password">
+            {% if next %}
+                <input type="hidden" name="next" value="{{ next }}"/>
+            {% endif %}
             <input type="submit" value="Login"/>
         </form>
         <a href="{% url 'petmon:user_control' 'signup' %}">Sign up</a>

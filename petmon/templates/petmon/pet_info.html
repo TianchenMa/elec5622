@@ -13,7 +13,6 @@
         </form>
     {% else %}
         <h3>My Pets</h3>
-        <a href="{% url 'petmon:pet' 'choose' %}">Add Pet</a>
     {% endif %}
 
     {% if pet %}
@@ -26,6 +25,9 @@
         <p>Speed: {{ pet.speed }}</p>
         <p>Satiation: {{ pet.satiation }}</p>
         <p>Lush: {{ pet.lush }}</p>
+    {% else %}
+        <p>No pet</p>
+        <a href="{% url 'petmon:pet' 'choose' %}">Add Pet</a>
     {% endif %}
 
     <br>

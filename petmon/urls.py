@@ -1,4 +1,5 @@
-from django.conf.urls import url
+from django.conf.urls import url, include
+from django.contrib.auth import views as auth_views
 
 from petmon.views import UserControlView, PetView, StoreView, BuyView, RepoView, MyPetView, UserView
 from petmon.views import IndexView
@@ -7,6 +8,10 @@ from petmon.views import IndexView
 app_name = 'petmon'
 urlpatterns = [
     url(r'^$', IndexView.as_view(), name='index'),
+
+    # url(r'^auth/', include('django.contrib.auth.urls')),
+
+    url(r'^auth/login/$', auth_views.login, {'template_name': 'petmon/login.html'}),
 
     url(r'^(?P<slug>\w+)$', UserControlView.as_view(), name='user_control'),
 
