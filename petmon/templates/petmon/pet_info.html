@@ -5,10 +5,12 @@
         <h3>{{ owner.username }}' Pets</h3>
         <form action="{% url 'petmon:user' owner.id 'friend_control' %}" method="post">
             {% csrf_token %}
-            {% if added_friend %}
-                <button type="submit">Remove Friend</button>
-            {% else %}
+            {% if added_friend == True %}
+                <p><strong>Added</strong></p>
+            {% elif added_friend == False %}
                 <button type="submit">Add Friend</button>
+            {% elif added_friend == '-1' %}
+                <p><strong>Request sent.</strong></p>
             {% endif %}
         </form>
     {% else %}

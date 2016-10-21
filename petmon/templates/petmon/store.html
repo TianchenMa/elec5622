@@ -2,18 +2,21 @@
 
 {% block content %}
 
-    {% if log_user %}
-        <h3>My Repo</h3>
-        {% if my_item %}
-            <ul>
-                {% for item in my_item %}
-                    <li>Name: {{ item.commodity.name }}</li>
-                    <p>Count: {{ item.count }}</p>
-                {% endfor %}
-            </ul>
-        {% else %}
-            Empty repo.
-        {% endif %}
+    <h3>Shop Items</h3>
+    {% if object_list %}
+        <ul>
+            {% for item in object_list %}
+                <form id="shopForm" action="{% url 'petmon:shop_control' 'add_to_cart' %}" method="get">
+                    <input type="hidden" name="id" value="{{ item.id }}"/>
+                    <li>{{ item.name }}</li>
+                    <p>Price: {{ item.price }}</p>
+                    <p>Satiation: {{ item.satiation }} | Lush: {{ item.lush }}</p>
+                    <p>HP: {{ item.hp }} | Attack: {{ item.attack }} | Defence: {{ item.defence }} | Speed: {{ item.speed }}</p>
+                    <label>Amount: <input type="text" name="count"></label>
+                    <button type="submit">Add to cart</button>
+                </form>
+            {% endfor %}
+        </ul>
     {% endif %}
 
     <h3>Shopping cart</h3>
@@ -40,19 +43,18 @@
         <p>Empty cart</p>
     {% endif %}
 
-    <h3>Shop Items</h3>
-    {% if object_list %}
-        <ul>
-            {% for item in object_list %}
-                <form id="shopForm" action="{% url 'petmon:shop_control' 'add_to_cart' %}" method="get">
-                    <input type="hidden" name="id" value="{{ item.id }}"/>
-                    <li>{{ item.name }}</li>
-                    <p>Price: {{ item.price }}</p>
-                    <label>Amount: <input type="text" name="count"></label>
-                    <button type="submit">Add to cart</button>
-                </form>
-            {% endfor %}
-        </ul>
+    {% if log_user %}
+        <h3>My Repo</h3>
+        {% if my_item %}
+            <ul>
+                {% for item in my_item %}
+                    <li>Name: {{ item.commodity.name }}</li>
+                    <p>Count: {{ item.count }}</p>
+                {% endfor %}
+            </ul>
+        {% else %}
+            Empty repo.
+        {% endif %}
     {% endif %}
 
 {% endblock %}
