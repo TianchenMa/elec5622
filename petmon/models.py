@@ -45,6 +45,7 @@ class User(AbstractUser):
     gender = models.CharField(max_length=1, default='0', choices=GENDER)
     step = models.IntegerField(default=0)
     intro = models.CharField(max_length=200, null=True, blank=True)
+    unviewed = models.IntegerField(default=0)
     friends = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         through='Relationship',
@@ -69,8 +70,22 @@ class Relationship(models.Model):
         on_delete=models.CASCADE,
         related_name='to_user'
     )
-    reviewed = models.BooleanField(default=False)
     add_date = models.DateTimeField('Date added.')
+
+
+class Request(models.Model):
+    from_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='send_user'
+    )
+    to_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='get_user'
+    )
+    viewed = models.BooleanField(default=False)
+    send_date = models.DateTimeField('Date request.')
 
 
 class Pet(models.Model):
