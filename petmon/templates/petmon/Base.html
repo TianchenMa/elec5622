@@ -20,6 +20,8 @@
     {% else %}
         <p>{{ log_user.username }}</p>
         <a href="{% url 'petmon:my_pet' %}">My Pet</a>
+        <a href="{% url 'petmon:user_control' 'friends' %}">Friends</a>
+        <a href="{% url 'petmon:user_control' 'messages' %}">Messages: {{ unread_news }}</a>
         <p>Step count: {{ log_user.step }}</p>
         <a href="{% url 'petmon:repo' %}">My Repo</a>
         <form action="{% url 'petmon:user_control' 'logout' %}" method="post">
@@ -44,6 +46,7 @@
         <ul>
             {% for friend in friend_rank %}
                 <li>{{ forloop.counter }}: {{ friend.username }}</li>
+                <p>Rank: {{ friend.pet.rank }}</p>
             {% endfor %}
         </ul>
     {% else %}

@@ -1,0 +1,18 @@
+{% extends 'petmon/Base.html' %}
+
+{% block content %}
+    {% if messages %}
+        <ul>
+            {% for message in messages %}
+                <form id="message" action="{% url 'petmon:user_control' 'permit_request' %}" method="post">
+                    {% csrf_token %}
+                    <li>User <strong>{{ message.from_user.username }}</strong> wants to add you to friend.</li>
+                    <input type="hidden" name="from_user_id" value="{{ message.from_user.id }}">
+                    <button type="submit">Add</button>
+                </form>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No unread messages.</p>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'petmon/Base.html' %}
+
+{% block content %}
+
+    {% if friends %}
+        <ul>
+            {% for friend in friends %}
+                <li><a href="{% url 'petmon:user' friend.id 'homepage' %}">{{ friend.username }}</a></li>
+                <form action="{% url 'petmon:user_control' 'remove_friend' %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_id" value="{{ friend.id }}"/>
+                    <button type="submit">Remove</button>
+                </form>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No friends.</p>
+    {% endif %}
+
+{% endblock %}

@@ -12,7 +12,7 @@ from django.views.generic import ListView, TemplateView
 from django.views.generic.base import ContextMixin
 
 from petmon.forms import LoginForm, PetChooseForm
-from petmon.models import User, Pet, Commodity, Repo, Relationship
+from petmon.models import User, Pet, Commodity, Repo, Relationship, Request
 
 
 # Create your views here.
@@ -23,6 +23,7 @@ class BaseMixin(ContextMixin):
         if self.request.user.is_active:
             user = User.objects.get(pk=self.request.user.id)
             context['friend_rank'] = user.friends.order_by('-pet__rank')[:10]
+            context['unread_news'] = user.unviewed
         else:
             user = None
 
@@ -49,6 +50,10 @@ class UserControlView(BaseMixin, View):
 
         if slug == 'signup':
             return render(self.request, 'petmon/signup.html')
+        elif slug == 'messages':
+            return self.messages(self.request)
+        elif slug == 'friends':
+            return self.friends(self.request)
         else:
             return HttpResponseRedirect(reverse('petmon:index'))
 
@@ -61,12 +66,14 @@ class UserControlView(BaseMixin, View):
             return self.logout()
         elif slug == 'signup':
             return self.signup()
+        elif slug == 'permit_request':
+            return self.permit_friend_request(self.request)
+        elif slug == 'remove_friend':
+            return self.remove_friend(self.request)
         else:
             return HttpResponseRedirect(reverse('petmon:index'))
 
     def login(self):
-        # context = super(UserControlView, self).get_context_data()
-
         try:
             next_page = self.request.POST['next']
         except KeyError:
@@ -81,8 +88,6 @@ class UserControlView(BaseMixin, View):
             if user is not None:
                 self.request.session.set_expiry(0)
                 login(self.request, user)
-                # context = dict()
-                # context['log_user'] = user
 
         return HttpResponseRedirect(next_page)
 
@@ -110,6 +115,61 @@ class UserControlView(BaseMixin, View):
         # return render(self.request, 'petmon/choose.html')
         return HttpResponseRedirect(reverse('petmon:pet', kwargs={'slug': 'choose'}))
 
+    @method_decorator(login_required)
+    def messages(self, request):
+        context = self.get_context_data()
+        log_user = context['log_user']
+        context['messages'] = Request.objects.filter(to_user=log_user, viewed=False)
+
+        return render(self.request, 'petmon/messages.html', context)
+
+    @method_decorator(login_required)
+    def friends(self, request):
+        context = self.get_context_data()
+        log_user = context['log_user']
+        context['friends'] = log_user.friends.all()
+
+        return render(self.request, 'petmon/friends.html', context)
+
+    @method_decorator(login_required)
+    def permit_friend_request(self, request):
+        context = self.get_context_data()
+        log_user = context['log_user']
+        from_user_id = self.request.POST['from_user_id']
+        request = Request.objects.get(from_user_id=from_user_id, to_user_id=log_user.id)
+        request.viewed = True
+        Relationship.objects.create(from_user_id=log_user.id,
+                                    to_user_id=from_user_id,
+                                    add_date=timezone.now()
+                                    ).save()
+        Relationship.objects.create(from_user_id=from_user_id,
+                                    to_user_id=log_user.id,
+                                    add_date=timezone.now()
+                                    ).save()
+        request.save()
+
+        if log_user.unviewed > 0:
+            log_user.unviewed = F('unviewed') - 1
+            log_user.save()
+
+        return HttpResponseRedirect(reverse('petmon:user_control', kwargs={'slug': 'messages'}))
+
+    @method_decorator(login_required)
+    def remove_friend(self, request):
+        context = self.get_context_data()
+        to_user_id = self.request.POST['user_id']
+        log_user = context['log_user']
+        Relationship.objects.get(from_user=log_user, to_user_id=to_user_id).delete()
+        Relationship.objects.get(from_user_id=to_user_id, to_user=log_user).delete()
+        try:
+            Request.objects.get(from_user=log_user, to_user_id=to_user_id).delete()
+        except ObjectDoesNotExist:
+            Request.objects.get(from_user_id=to_user_id, to_user=log_user).delete()
+
+        context['friends'] = log_user.friends.all()
+
+        return render(reverse('petmon:user_control', kwargs={'slug': 'friends'}))
+
 
 # URL name = 'user'
 class UserView(BaseMixin, View):
@@ -130,7 +190,7 @@ class UserView(BaseMixin, View):
         slug = self.kwargs.get('slug')
 
         if slug == 'friend_control':
-            return self.add_or_remove_friend(self.request)
+            return self.send_request(self.request)
         else:
             raise PermissionDenied
 
@@ -143,18 +203,22 @@ class UserView(BaseMixin, View):
         else:
             raise Http404
 
-        log_user = context['log_user']
         try:
             context['pet'] = user.pet
         except AttributeError:
             pass
 
         context['owner'] = user
-
+        log_user = context['log_user']
         try:
-            context['added_friend'] = user in log_user.friends.all()
-        except AttributeError:
-            context['added_friend'] = False
+            relationship = Relationship.objects.get(from_user=log_user, to_user=user)
+            context['added_friend'] = True
+        except ObjectDoesNotExist:
+            try:
+                Request.objects.get(from_user=log_user, to_user=user)
+                context['added_friend'] = '-1'
+            except ObjectDoesNotExist:
+                context['added_friend'] = False
 
         return context
 
@@ -164,21 +228,19 @@ class UserView(BaseMixin, View):
         return render(self.request, 'petmon/pet_info.html', context)
 
     @method_decorator(login_required)
-    def add_or_remove_friend(self, request):
+    def send_request(self, request):
         context = self.get_context_data()
         added_user = context['owner']
         log_user = context['log_user']
 
-        # if type(log_user) is User:
-        if not context['added_friend']:
-            relationship = Relationship.objects.create(
-                from_user=log_user,
-                to_user=added_user,
-                add_date=timezone.now()
-            )
-            relationship.save()
-        else:
-            Relationship.objects.filter(from_user=log_user, to_user=added_user).delete()
+        request = Request.objects.create(
+            from_user=log_user,
+            to_user=added_user,
+            send_date=timezone.now()
+        )
+        request.save()
+        added_user.unviewed = F('unviewed') + 1
+        added_user.save()
 
         return HttpResponseRedirect(
             reverse('petmon:user', kwargs={'user_id': added_user.id, 'slug': 'homepage'}))
@@ -314,13 +376,27 @@ class PetView(BaseMixin, View):
 
         for k, v in feeds.items():
             item = Repo.objects.get(pk=k)
-            satiation, lush = 0, 0
+            satiation, lush, hp, attack, defence, speed = 0, 0, 0, 0, 0, 0
             if item.count >= v:
                 satiation += v * item.commodity.satiation
                 lush += v * item.commodity.lush
-                pet.satiation += satiation
-                pet.lush += lush
+                hp += v * item.commodity.hp
+                attack += v * item.commodity.attack
+                defence += v * item.commodity.defence
+                speed += v * item.commodity.speed
+                pet.satiation = F('satiation') + satiation
+                pet.lush = F('lush') + lush
+                pet.hp = F('hp') + hp
+                pet.attack = F('attack') + attack
+                pet.defence = F('defence') + defence
+                pet.speed = F('speed') + speed
                 item.count = F('count') - v
+
+                if pet.satiation > 100:
+                    pet.satiation = 100
+
+                if pet.lush > 100:
+                    pet.lush = 100
 
                 if item.count == 0:
                     item.delete()
