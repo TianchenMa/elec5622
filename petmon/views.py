@@ -374,53 +374,52 @@ class PetView(BaseMixin, View):
 
         return HttpResponseRedirect(reverse('petmon:my_pet'))
 
+    @method_decorator(login_required)
+    def feed_pet(self, request):
+        context = self.get_context_data()
+        feeds = self.request.session['feed']
+        fails = dict()
+        user = context['log_user']
+        pet = Pet.objects.get(owner=user)
 
-@method_decorator(login_required)
-def feed_pet(self, request):
-    context = self.get_context_data()
-    feeds = self.request.session['feed']
-    fails = dict()
-    user = context['log_user']
-    pet = Pet.objects.get(owner=user)
+        for k, v in feeds.items():
+            item = Repo.objects.get(pk=k)
+            satiation, lush, hp, attack, defence, speed = 0, 0, 0, 0, 0, 0
+            if item.count >= v:
+                satiation += v * item.commodity.satiation
+                lush += v * item.commodity.lush
+                hp += v * item.commodity.hp
+                attack += v * item.commodity.attack
+                defence += v * item.commodity.defence
+                speed += v * item.commodity.speed
+                pet.satiation = F('satiation') + satiation
+                pet.lush = F('lush') + lush
+                pet.hp = F('hp') + hp
+                pet.attack = F('attack') + attack
+                pet.defence = F('defence') + defence
+                pet.speed = F('speed') + speed
+                item.count = F('count') - v
 
-    for k, v in feeds.items():
-        item = Repo.objects.get(pk=k)
-        satiation, lush, hp, attack, defence, speed = 0, 0, 0, 0, 0, 0
-        if item.count >= v:
-            satiation += v * item.commodity.satiation
-            lush += v * item.commodity.lush
-            hp += v * item.commodity.hp
-            attack += v * item.commodity.attack
-            defence += v * item.commodity.defence
-            speed += v * item.commodity.speed
-            pet.satiation = F('satiation') + satiation
-            pet.lush = F('lush') + lush
-            pet.hp = F('hp') + hp
-            pet.attack = F('attack') + attack
-            pet.defence = F('defence') + defence
-            pet.speed = F('speed') + speed
-            item.count = F('count') - v
+                if pet.satiation > 100:
+                    pet.satiation = 100
 
-            if pet.satiation > 100:
-                pet.satiation = 100
+                if pet.lush > 100:
+                    pet.lush = 100
 
-            if pet.lush > 100:
-                pet.lush = 100
-
-            if item.count == 0:
-                item.delete()
+                if item.count == 0:
+                    item.delete()
+                else:
+                    item.save()
             else:
-                item.save()
-        else:
-            fails[k] = v
+                fails[k] = v
 
-    pet.refresh_rank()
-    pet.save()
-    del self.request.session['feed']
-    del self.request.session['feed_item']
-    self.request.session.modified = True
+        pet.refresh_rank()
+        pet.save()
+        del self.request.session['feed']
+        del self.request.session['feed_item']
+        self.request.session.modified = True
 
-    return HttpResponseRedirect(reverse('petmon:my_pet'))  # URL name = 'store'
+        return HttpResponseRedirect(reverse('petmon:my_pet'))  # URL name = 'store'
 
 
 class StoreView(BaseMixin, ListView):
