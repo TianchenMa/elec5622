@@ -392,18 +392,19 @@ class PetView(BaseMixin, View):
                 attack += v * item.commodity.attack
                 defence += v * item.commodity.defence
                 speed += v * item.commodity.speed
-                pet.satiation = F('satiation') + satiation
-                pet.lush = F('lush') + lush
                 pet.hp = F('hp') + hp
                 pet.attack = F('attack') + attack
                 pet.defence = F('defence') + defence
                 pet.speed = F('speed') + speed
                 item.count = F('count') - v
 
-                if pet.satiation > 100:
+                if pet.satiation + satiation <= 100:
+                    pet.satiation = F('satiation') + satiation
+                else:
                     pet.satiation = 100
-
-                if pet.lush > 100:
+                if pet.lush + lush <= 100:
+                    pet.lush = F('lush') + lush
+                else:
                     pet.lush = 100
 
                 if item.count == 0:
