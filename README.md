@@ -1,2 +1,4 @@
 # elec5622
-ELEC5622
+Petmon Go
+
+Detail introduction see Wiki.
