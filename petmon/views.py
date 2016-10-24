@@ -114,7 +114,7 @@ class UserControlView(BaseMixin, View):
             except Exception:
                 pass
         else:
-            HttpResponseRedirect(reverse('petmon:usesr_control', kwargs={'slug': 'signup'}))
+            return HttpResponseRedirect(reverse('petmon:user_control', kwargs={'slug': 'signup'}))
 
         # return render(self.request, 'petmon/choose.html')
         return HttpResponseRedirect(reverse('petmon:pet', kwargs={'slug': 'choose'}))
