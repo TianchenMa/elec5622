@@ -3,7 +3,7 @@ SET GLOBAL event_scheduler = ON;
 delimiter |
 
 create EVENT auto_decrease
-ON SCHEDULE EVERY 2 SECOND 
+ON SCHEDULE EVERY * SECOND -- change * to your own setting of second for decrement
 DO 
 begin
 	update elec5622.petmon_pet set satiation = satiation - 1 where satiation > 0;
